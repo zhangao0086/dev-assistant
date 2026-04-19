@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings - Dev Assistant</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+
+  .page { max-width: 960px; margin: 0 auto; padding: 24px 24px 80px; }
+
+  .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; font-size: 13px; display: flex; align-items: flex-start; gap: 10px; }
+  .alert-warn { background: #2d1f07; border: 1px solid #7c4e07; color: #fbbf24; }
+  .alert-info { background: #0c1f3a; border: 1px solid #1e4080; color: #60a5fa; }
+  .alert-success { background: #0a2416; border: 1px solid #166534; color: #4ade80; }
+  .alert-icon { font-size: 16px; flex-shrink: 0; line-height: 1.4; }
+
+  .section { margin-bottom: 32px; }
+  .section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 12px; }
+
+  .card { background: #151923; border: 1px solid #1e2433; border-radius: 10px; overflow: hidden; }
+
+  .field { padding: 16px 20px; border-bottom: 1px solid #1e2433; display: flex; flex-direction: column; gap: 6px; }
+  .field:last-child { border-bottom: none; }
+  .field-label { font-size: 13px; font-weight: 500; color: #cbd5e1; display: flex; align-items: center; gap: 8px; }
+  .field-label .badge { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .badge-required { background: #3b1515; color: #f87171; }
+  .badge-restart { background: #1e2c1a; color: #86efac; }
+  .field-desc { font-size: 12px; color: #64748b; }
+  .field-input { margin-top: 2px; }
+
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    background: #0f1117;
+    border: 1px solid #2d3748;
+    border-radius: 6px;
+    color: #e2e8f0;
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    font-family: "SF Mono", "Fira Code", monospace;
+    transition: border-color 0.15s;
+  }
+  input[type="text"]:focus, input[type="number"]:focus { border-color: #3b82f6; }
+  input[type="text"]::placeholder { color: #475569; }
+
+  .vcs-item { padding: 16px 20px; border-bottom: 1px solid #1e2433; }
+  .vcs-item:last-child { border-bottom: none; }
+  .vcs-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .vcs-name { font-size: 13px; font-weight: 600; color: #cbd5e1; }
+  .status-badge { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 12px; }
+  .status-ok { background: #0a2416; color: #4ade80; border: 1px solid #166534; }
+  .status-err { background: #2d1515; color: #f87171; border: 1px solid #7f1d1d; }
+  .status-loading { background: #1e2433; color: #94a3b8; border: 1px solid #2d3748; }
+  .status-missing { background: #1e1a0a; color: #fbbf24; border: 1px solid #78350f; }
+  .vcs-detail { font-size: 12px; color: #64748b; font-family: "SF Mono", "Fira Code", monospace; word-break: break-all; }
+  .vcs-hint { font-size: 12px; color: #475569; margin-top: 6px; }
+  .vcs-hint code { background: #0f1117; border: 1px solid #2d3748; border-radius: 4px; padding: 1px 6px; font-family: "SF Mono", "Fira Code", monospace; color: #94a3b8; }
+
+  .actions { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+  .btn { padding: 9px 20px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.15s, background 0.15s; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: #2563eb; color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+  .btn-ghost { background: transparent; color: #94a3b8; border: 1px solid #2d3748; }
+  .btn-ghost:hover:not(:disabled) { background: #1e2433; color: #e2e8f0; }
+
+  #save-status { font-size: 13px; color: #64748b; }
+</style>
+</head>
+<body>
+
+<div id="app-header"></div>
+<script src="/static/js/header.js"></script>
+
+<div class="page">
+
+  <div id="config-error-banner" style="display:none" class="alert alert-warn">
+    <span class="alert-icon">⚠</span>
+    <span id="config-error-text"></span>
+  </div>
+
+  <div id="restart-banner" style="display:none" class="alert alert-info">
+    <span class="alert-icon">ℹ</span>
+    Settings saved. Restart the server for PORT, DATA_DIR, or TARGET_PROJECT_PATH changes to take effect.
+  </div>
+
+  <div id="save-ok-banner" style="display:none" class="alert alert-success">
+    <span class="alert-icon">✓</span>
+    Settings saved successfully.
+  </div>
+
+  <!-- General -->
+  <div class="section">
+    <div class="section-title">General</div>
+    <div class="card">
+
+      <div class="field">
+        <div class="field-label">
+          TARGET_PROJECT_PATH
+          <span class="badge badge-required">Required</span>
+          <span class="badge badge-restart">Restart</span>
+        </div>
+        <div class="field-desc">Absolute path to the git repository where Claude creates branches and writes code.</div>
+        <div class="field-input">
+          <input type="text" id="TARGET_PROJECT_PATH" placeholder="/home/alice/projects/my-app">
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">DEFAULT_BRANCH</div>
+        <div class="field-desc">Default branch name in the target repository (usually <code style="background:#0f1117;border:1px solid #2d3748;border-radius:4px;padding:1px 5px;font-family:monospace;font-size:11px;color:#94a3b8">master</code> or <code style="background:#0f1117;border:1px solid #2d3748;border-radius:4px;padding:1px 5px;font-family:monospace;font-size:11px;color:#94a3b8">main</code>).</div>
+        <div class="field-input">
+          <input type="text" id="DEFAULT_BRANCH" placeholder="master">
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">
+          DATA_DIR
+          <span class="badge badge-restart">Restart</span>
+        </div>
+        <div class="field-desc">Directory for task data and session logs. Defaults to <code style="background:#0f1117;border:1px solid #2d3748;border-radius:4px;padding:1px 5px;font-family:monospace;font-size:11px;color:#94a3b8">~/.dev-assistant</code>.</div>
+        <div class="field-input">
+          <input type="text" id="DATA_DIR" placeholder="~/.dev-assistant">
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">
+          PORT
+          <span class="badge badge-restart">Restart</span>
+        </div>
+        <div class="field-desc">HTTP port the server listens on.</div>
+        <div class="field-input">
+          <input type="number" id="PORT" placeholder="8089" min="1" max="65535" style="width:140px">
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- VCS Config -->
+  <div class="section">
+    <div class="section-title">VCS CLI Config Directories</div>
+    <div class="card">
+
+      <div class="field">
+        <div class="field-label">GLAB_CONFIG_DIR</div>
+        <div class="field-desc">Directory containing the glab (GitLab CLI) <code style="background:#0f1117;border:1px solid #2d3748;border-radius:4px;padding:1px 5px;font-family:monospace;font-size:11px;color:#94a3b8">config.yml</code> with your GitLab token.</div>
+        <div class="field-input">
+          <input type="text" id="GLAB_CONFIG_DIR" placeholder=".gitlab/">
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">GH_CONFIG_DIR</div>
+        <div class="field-desc">Directory containing the gh (GitHub CLI) <code style="background:#0f1117;border:1px solid #2d3748;border-radius:4px;padding:1px 5px;font-family:monospace;font-size:11px;color:#94a3b8">config.yml</code> with your GitHub token.</div>
+        <div class="field-input">
+          <input type="text" id="GH_CONFIG_DIR" placeholder=".github/">
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- VCS Auth Status -->
+  <div class="section">
+    <div class="section-title">VCS Authentication Status</div>
+    <div class="card" id="vcs-card">
+      <div class="vcs-item">
+        <div class="vcs-header">
+          <span class="vcs-name">GitHub (gh)</span>
+          <span class="status-badge status-loading" id="gh-badge">Checking…</span>
+        </div>
+        <div class="vcs-detail" id="gh-detail"></div>
+        <div class="vcs-hint" id="gh-hint" style="display:none"></div>
+      </div>
+      <div class="vcs-item">
+        <div class="vcs-header">
+          <span class="vcs-name">GitLab (glab)</span>
+          <span class="status-badge status-loading" id="glab-badge">Checking…</span>
+        </div>
+        <div class="vcs-detail" id="glab-detail"></div>
+        <div class="vcs-hint" id="glab-hint" style="display:none"></div>
+      </div>
+    </div>
+    <div style="margin-top:10px;text-align:right">
+      <button class="btn btn-ghost" onclick="loadVcsStatus()" id="btn-refresh-vcs">Refresh status</button>
+    </div>
+  </div>
+
+  <!-- Save -->
+  <div class="actions">
+    <button class="btn btn-primary" onclick="saveSettings()" id="btn-save">Save Settings</button>
+    <span id="save-status"></span>
+  </div>
+
+</div>
+
+<script>
+const FIELDS = ['TARGET_PROJECT_PATH','DEFAULT_BRANCH','DATA_DIR','PORT','GLAB_CONFIG_DIR','GH_CONFIG_DIR'];
+
+async function loadSettings() {
+  try {
+    const res = await fetch('/settings');
+    if (!res.ok) return;
+    const data = await res.json();
+    FIELDS.forEach(k => {
+      const el = document.getElementById(k);
+      if (el && data[k] != null) el.value = data[k];
+    });
+    if (data._config_error) {
+      document.getElementById('config-error-text').textContent = data._config_error;
+      document.getElementById('config-error-banner').style.display = 'flex';
+    }
+  } catch (e) { console.error(e); }
+}
+
+async function saveSettings() {
+  const btn = document.getElementById('btn-save');
+  const status = document.getElementById('save-status');
+  btn.disabled = true;
+  status.textContent = 'Saving…';
+
+  const payload = {};
+  FIELDS.forEach(k => {
+    const el = document.getElementById(k);
+    if (el) payload[k] = el.value.trim();
+  });
+
+  try {
+    const res = await fetch('/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById('config-error-banner').style.display = 'none';
+      document.getElementById('save-ok-banner').style.display = 'flex';
+      if (data.restart_required) {
+        document.getElementById('restart-banner').style.display = 'flex';
+        document.getElementById('save-ok-banner').style.display = 'none';
+      }
+      status.textContent = '';
+    } else {
+      status.textContent = 'Error saving settings.';
+    }
+  } catch (e) {
+    status.textContent = 'Network error.';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function loadVcsStatus() {
+  const btn = document.getElementById('btn-refresh-vcs');
+  btn.disabled = true;
+
+  ['gh', 'glab'].forEach(k => {
+    document.getElementById(`${k}-badge`).className = 'status-badge status-loading';
+    document.getElementById(`${k}-badge`).textContent = 'Checking…';
+    document.getElementById(`${k}-detail`).textContent = '';
+    document.getElementById(`${k}-hint`).style.display = 'none';
+  });
+
+  try {
+    const res = await fetch('/settings/vcs-status');
+    const data = await res.json();
+    renderVcs('gh', data.gh, 'gh auth login', 'gh auth login');
+    renderVcs('glab', data.glab, 'glab auth login', 'glab auth login');
+  } catch (e) {
+    ['gh', 'glab'].forEach(k => {
+      document.getElementById(`${k}-badge`).className = 'status-badge status-err';
+      document.getElementById(`${k}-badge`).textContent = 'Error';
+    });
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderVcs(key, info, loginCmd, _) {
+  const badge = document.getElementById(`${key}-badge`);
+  const detail = document.getElementById(`${key}-detail`);
+  const hint = document.getElementById(`${key}-hint`);
+
+  if (!info.available) {
+    badge.className = 'status-badge status-missing';
+    badge.textContent = 'Not installed';
+    detail.textContent = info.detail || '';
+    hint.innerHTML = `Install the CLI, then run <code>${loginCmd}</code> to authenticate.`;
+    hint.style.display = 'block';
+  } else if (info.authenticated) {
+    badge.className = 'status-badge status-ok';
+    badge.textContent = 'Authenticated';
+    detail.textContent = info.detail || '';
+  } else {
+    badge.className = 'status-badge status-err';
+    badge.textContent = 'Not authenticated';
+    detail.textContent = info.detail || '';
+    hint.innerHTML = `Run <code>${loginCmd}</code> to authenticate.`;
+    hint.style.display = 'block';
+  }
+}
+
+loadSettings();
+loadVcsStatus();
+</script>
+</body>
+</html>

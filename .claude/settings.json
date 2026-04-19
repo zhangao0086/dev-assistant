@@ -1,0 +1,12 @@
+{
+  "skipWebFetchPreflight": true,
+  "permissions": {
+    "allow": [
+      "Bash",
+      "Read",
+      "WebFetch(*)",
+      "Read(*)",
+      "Write(.claude/plans/*)"
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+uv.lock
+/logs/
+run/
+__pycache__/
+.venv/
+*.pyc
+*.pyo
+*.pyd
+
+# GitLab CLI credentials (contains tokens)
+.gitlab/config.yml
+
+# IDE settings
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db

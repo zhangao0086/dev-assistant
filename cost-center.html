@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Cost Center - Dev Assistant</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/static/css/style.css">
+<style>
+body {
+  padding: 0;
+  min-height: 100vh;
+}
+
+.content-wrapper {
+  padding: 20px;
+}
+
+.filters {
+  background: #1e293b;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.filter-group label {
+  font-size: 13px;
+  color: #94a3b8;
+}
+.filter-group input, .filter-group select {
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #e2e8f0;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.btn:hover { background: #2563eb; }
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.card {
+  background: #1e293b;
+  border-radius: 8px;
+  padding: 20px;
+}
+.card-title {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+.card-value {
+  font-size: 28px;
+  font-weight: 600;
+  color: #60a5fa;
+}
+.card-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.section {
+  background: #1e293b;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.chart-container {
+  height: 300px;
+  position: relative;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow-x: auto;
+  display: block;
+}
+thead, tbody, tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+th, td {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+th {
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+td {
+  font-size: 14px;
+}
+tr:hover {
+  background: #0f172a;
+}
+
+.type-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.type-refactor { background: #7c3aed; color: white; }
+.type-docs { background: #0ea5e9; color: white; }
+.type-normal { background: #64748b; color: white; }
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #64748b;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding: 16px;
+  }
+
+  table {
+    font-size: 12px;
+  }
+
+  th, td {
+    padding: 8px 4px;
+    font-size: 12px;
+  }
+
+  .type-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+}
+</style>
+</head>
+<body>
+
+<div id="app-header"></div>
+<script src="/static/js/header.js"></script>
+
+<div class="content-wrapper">
+<div class="filters">
+  <div class="filter-group">
+    <label>Time range:</label>
+    <select id="time-range" onchange="onTimeRangeChange()">
+      <option value="all">All</option>
+      <option value="today">Today</option>
+      <option value="week" selected>Last 7 days</option>
+      <option value="month">Last 30 days</option>
+      <option value="custom">Custom</option>
+    </select>
+  </div>
+  <div class="filter-group" id="custom-date-group" style="display: none;">
+    <input type="date" id="start-date">
+    <span style="color: #64748b;">to</span>
+    <input type="date" id="end-date">
+  </div>
+  <button class="btn" onclick="loadCostStats()">Refresh</button>
+</div>
+
+<div class="summary-cards">
+  <div class="card">
+    <div class="card-title">Total Cost</div>
+    <div class="card-value" id="total-cost">$0.00</div>
+    <div class="card-subtitle" id="total-tasks">0 tasks</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Input Tokens</div>
+    <div class="card-value" id="total-input-tokens">0</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Output Tokens</div>
+    <div class="card-value" id="total-output-tokens">0</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Avg Cost</div>
+    <div class="card-value" id="avg-cost">$0.00</div>
+    <div class="card-subtitle">per task</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">By Task Type</div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Tasks</th>
+          <th>Total Cost</th>
+          <th>Input Tokens</th>
+          <th>Output Tokens</th>
+          <th>Avg Cost</th>
+        </tr>
+      </thead>
+      <tbody id="type-stats-body">
+        <tr><td colspan="6" class="loading">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Daily Cost Trend</div>
+  <div class="chart-container">
+    <canvas id="daily-chart"></canvas>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Daily Completion Rate</div>
+  <div class="chart-container">
+    <canvas id="completion-chart"></canvas>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Top 10 Most Expensive Tasks</div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Task</th>
+          <th>Created</th>
+          <th>Cost</th>
+          <th>Input Tokens</th>
+          <th>Output Tokens</th>
+        </tr>
+      </thead>
+      <tbody id="top-tasks-body">
+        <tr><td colspan="5" class="loading">Loading...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+let dailyChart = null;
+let completionChart = null;
+
+function onTimeRangeChange() {
+  const range = document.getElementById('time-range').value;
+  const customGroup = document.getElementById('custom-date-group');
+
+  if (range === 'custom') {
+    customGroup.style.display = 'flex';
+  } else {
+    customGroup.style.display = 'none';
+    loadCostStats();
+  }
+}
+
+function getDateRange() {
+  const range = document.getElementById('time-range').value;
+  const today = new Date();
+
+  if (range === 'all') {
+    return { start: null, end: null };
+  } else if (range === 'today') {
+    const dateStr = today.toISOString().split('T')[0];
+    return { start: dateStr, end: dateStr };
+  } else if (range === 'week') {
+    const start = new Date(today);
+    start.setDate(start.getDate() - 7);
+    return { start: start.toISOString().split('T')[0], end: today.toISOString().split('T')[0] };
+  } else if (range === 'month') {
+    const start = new Date(today);
+    start.setDate(start.getDate() - 30);
+    return { start: start.toISOString().split('T')[0], end: today.toISOString().split('T')[0] };
+  } else if (range === 'custom') {
+    return {
+      start: document.getElementById('start-date').value || null,
+      end: document.getElementById('end-date').value || null
+    };
+  }
+}
+
+async function loadCostStats() {
+  const { start, end } = getDateRange();
+  const params = new URLSearchParams();
+  if (start) params.append('start_date', start);
+  if (end) params.append('end_date', end);
+
+  try {
+    const response = await fetch(`/cost-stats?${params}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+
+    document.getElementById('total-cost').textContent = `$${data.total_cost_usd.toFixed(2)}`;
+    document.getElementById('total-tasks').textContent = `${data.total_tasks} tasks`;
+    document.getElementById('total-input-tokens').textContent = data.total_input_tokens.toLocaleString();
+    document.getElementById('total-output-tokens').textContent = data.total_output_tokens.toLocaleString();
+    const avgCost = data.total_tasks > 0 ? data.total_cost_usd / data.total_tasks : 0;
+    document.getElementById('avg-cost').textContent = `$${avgCost.toFixed(2)}`;
+
+    renderTypeStats(data.by_type);
+    renderDailyChart(data.daily_stats);
+    renderCompletionChart(data.daily_stats);
+    renderTopTasks(data.top_tasks);
+
+  } catch (error) {
+    alert('Failed to load cost data: ' + error.message);
+  }
+}
+
+function renderTypeStats(byType) {
+  const tbody = document.getElementById('type-stats-body');
+  const typeNames = { refactor: 'Refactor', docs: 'Docs', normal: 'Normal' };
+  const typeClasses = { refactor: 'type-refactor', docs: 'type-docs', normal: 'type-normal' };
+
+  tbody.innerHTML = Object.entries(byType).map(([type, stats]) => {
+    const avgCost = stats.count > 0 ? stats.cost / stats.count : 0;
+    return `
+      <tr>
+        <td><span class="type-badge ${typeClasses[type]}">${typeNames[type]}</span></td>
+        <td>${stats.count}</td>
+        <td>$${stats.cost.toFixed(2)}</td>
+        <td>${stats.input_tokens.toLocaleString()}</td>
+        <td>${stats.output_tokens.toLocaleString()}</td>
+        <td>$${avgCost.toFixed(2)}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderDailyChart(dailyStats) {
+  const canvas = document.getElementById('daily-chart');
+  const ctx = canvas.getContext('2d');
+
+  const sortedDates = Object.keys(dailyStats).sort();
+  const costs = sortedDates.map(date => dailyStats[date].cost);
+
+  if (dailyChart) {
+    dailyChart.destroy();
+  }
+
+  dailyChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: sortedDates,
+      datasets: [{
+        label: 'Daily Cost (USD)',
+        data: costs,
+        borderColor: '#60a5fa',
+        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context) => `$${context.parsed.y.toFixed(2)}`
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => `$${value.toFixed(2)}`,
+            color: '#94a3b8'
+          },
+          grid: { color: '#334155' }
+        },
+        x: {
+          ticks: { color: '#94a3b8' },
+          grid: { color: '#334155' }
+        }
+      }
+    }
+  });
+}
+
+function renderCompletionChart(dailyStats) {
+  const canvas = document.getElementById('completion-chart');
+  const ctx = canvas.getContext('2d');
+
+  const sortedDates = Object.keys(dailyStats).sort();
+  const completionRates = sortedDates.map(date => {
+    const stats = dailyStats[date];
+    return stats.count > 0 ? (stats.completed / stats.count * 100) : 0;
+  });
+
+  if (completionChart) {
+    completionChart.destroy();
+  }
+
+  completionChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sortedDates,
+      datasets: [{
+        label: 'Completion Rate (%)',
+        data: completionRates,
+        backgroundColor: '#10b981',
+        borderColor: '#059669',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const date = context.label;
+              const stats = dailyStats[date];
+              return `Completion: ${context.parsed.y.toFixed(1)}% (${stats.completed}/${stats.count})`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          ticks: {
+            callback: (value) => `${value}%`,
+            color: '#94a3b8'
+          },
+          grid: { color: '#334155' }
+        },
+        x: {
+          ticks: { color: '#94a3b8' },
+          grid: { color: '#334155' }
+        }
+      }
+    }
+  });
+}
+
+function renderTopTasks(topTasks) {
+  const tbody = document.getElementById('top-tasks-body');
+
+  if (topTasks.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;">No data</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = topTasks.map(task => `
+    <tr>
+      <td style="max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${task.prompt}">
+        ${task.prompt}
+      </td>
+      <td>${new Date(task.created_at).toLocaleString()}</td>
+      <td style="color: #60a5fa; font-weight: 500;">$${task.cost.toFixed(2)}</td>
+      <td>${task.input_tokens.toLocaleString()}</td>
+      <td>${task.output_tokens.toLocaleString()}</td>
+    </tr>
+  `).join('');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadCostStats();
+});
+</script>
+
+</div>
+</body>
+</html>

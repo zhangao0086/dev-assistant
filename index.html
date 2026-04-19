@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Dev Assistant</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css?v=20260419">
+</head>
+<body>
+
+<div id="app-header"></div>
+<script src="/static/js/header.js"></script>
+
+<!-- Submit new task -->
+<div class="submit-area">
+  <textarea id="prompt-input" rows="2" placeholder="Describe your task — Enter to submit, Shift+Enter for new line..." autocomplete="off"></textarea>
+  <div style="display: flex; flex-direction: column; gap: 8px;">
+    <button class="btn-submit" id="btn-submit" onclick="submitTask()">Submit</button>
+    <label style="font-size: 12px; color: #94a3b8; cursor: pointer; user-select: none; display: flex; align-items: center; gap: 4px;">
+      <input type="checkbox" id="use-plan-mode" checked> Plan mode
+    </label>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat" id="filter-planning" onclick="toggleFilter('planning')"><div class="dot planning"></div><span id="cnt-planning">0</span> Planning</div>
+  <div class="stat" id="filter-developing" onclick="toggleFilter('developing')"><div class="dot developing"></div><span id="cnt-developing">0</span> Developing</div>
+  <div class="stat" id="filter-committing" onclick="toggleFilter('committing')"><div class="dot committing"></div><span id="cnt-committing">0</span> Committing</div>
+  <div class="stat" id="filter-pending" onclick="toggleFilter('pending')"><div class="dot pending"></div><span id="cnt-pending">0</span> Pending</div>
+  <div class="stat" id="filter-review" onclick="toggleFilter('review')"><div class="dot review"></div><span id="cnt-review">0</span> Review</div>
+  <div class="stat" id="filter-completed" onclick="toggleFilter('completed')"><div class="dot completed"></div><span id="cnt-completed">0</span> Completed</div>
+  <div class="stat" id="filter-failed" onclick="toggleFilter('failed')"><div class="dot failed"></div><span id="cnt-failed">0</span> Failed</div>
+  <div class="stat" id="filter-cancelled" onclick="toggleFilter('cancelled')"><div class="dot cancelled"></div><span id="cnt-cancelled">0</span> Cancelled</div>
+</div>
+
+<div class="main">
+  <!-- Left panel: task list -->
+  <div class="sessions-panel">
+    <div class="panel-header">
+      <span>Tasks</span>
+      <span id="refresh-hint" style="font-size:11px;color:#475569;">Auto-refreshing</span>
+    </div>
+    <div class="sessions-list" id="sessions-list">
+      <div style="padding:32px;text-align:center;color:#475569;font-size:13px;">No tasks yet</div>
+    </div>
+  </div>
+
+  <!-- Right panel: task detail -->
+  <div class="detail-panel">
+    <div class="detail-header">
+      <div style="display: flex; align-items: center;">
+        <button class="btn-back" onclick="closeMobileDetail()">← Back</button>
+        <span class="detail-title">Task Detail</span>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-stop" id="btn-stop" disabled onclick="stopSession()">Cancel</button>
+        <button class="btn btn-complete" id="btn-complete" disabled onclick="completeSession()">Mark Complete</button>
+        <button class="btn btn-delete" id="btn-delete" disabled onclick="deleteSession()">Delete</button>
+      </div>
+    </div>
+    <div class="detail-content" id="detail-content">
+      <div class="detail-empty">Select a task to view details</div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/app.js?v=20260417"></script>
+</body>
+</html>

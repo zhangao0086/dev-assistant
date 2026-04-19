@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cron Jobs - Dev Assistant</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+
+  .toolbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; border-bottom: 1px solid #1e2433; max-width: 960px; margin: 0 auto; border-bottom: none; }
+  .toolbar-wrap { border-bottom: 1px solid #1e2433; }
+  .toolbar-title { font-size: 13px; color: #94a3b8; font-weight: 500; }
+
+  .btn-new { background: #2563eb; color: #fff; font-size: 13px; padding: 6px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 500; }
+  .btn-new:hover { opacity: 0.85; }
+
+  .task-list { padding: 16px 24px; max-width: 960px; margin: 0 auto; }
+
+  .task-card { background: #1a1f2e; border: 1px solid #1e2433; border-radius: 10px; padding: 16px 18px; margin-bottom: 12px; }
+  .card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .card-name { font-size: 14px; font-weight: 600; color: #e2e8f0; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 500; }
+  .badge-on { background: #14532d; color: #4ade80; }
+  .badge-off { background: #1c1c2e; color: #64748b; }
+  .card-actions { margin-left: auto; display: flex; gap: 6px; }
+  .btn { font-size: 12px; padding: 4px 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 500; transition: opacity 0.15s; }
+  .btn:hover { opacity: 0.8; }
+  .btn-trigger { background: #065f46; color: #6ee7b7; }
+  .btn-edit { background: #1e3a5f; color: #93c5fd; }
+  .btn-delete { background: #1e2433; color: #94a3b8; }
+
+  .card-meta { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; color: #64748b; margin-bottom: 8px; }
+  .meta-item { display: flex; align-items: center; gap: 4px; }
+  .cron-expr { font-family: monospace; background: #0f1117; padding: 2px 6px; border-radius: 4px; color: #94a3b8; font-size: 12px; }
+  .cron-desc { font-size: 12px; color: #60a5fa; }
+  .card-prompt { font-size: 12px; color: #475569; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace; }
+
+  .empty { padding: 60px 24px; text-align: center; color: #475569; font-size: 14px; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 12px; padding: 24px; width: 560px; max-width: calc(100vw - 32px); max-height: 88vh; overflow-y: auto; }
+  .modal-title { font-size: 15px; font-weight: 600; color: #e2e8f0; margin-bottom: 20px; }
+
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 12px; color: #94a3b8; margin-bottom: 5px; display: block; }
+  .form-input { width: 100%; background: #0f1117; border: 1px solid #2d3748; border-radius: 6px; color: #e2e8f0; font-size: 13px; padding: 7px 10px; outline: none; font-family: inherit; }
+  .form-input:focus { border-color: #3b82f6; }
+  textarea.form-input { resize: vertical; min-height: 72px; line-height: 1.5; }
+  .form-row { display: flex; gap: 12px; }
+  .form-row .form-group { flex: 1; }
+  .form-check-row { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 14px; }
+  .form-check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #cbd5e1; cursor: pointer; }
+  .form-check input { cursor: pointer; }
+
+  .preset-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chip { font-size: 11px; padding: 2px 8px; background: #0f1117; border: 1px solid #2d3748; border-radius: 4px; color: #94a3b8; cursor: pointer; transition: border-color 0.15s; }
+  .chip:hover { border-color: #3b82f6; color: #60a5fa; }
+
+  .form-error { display: none; font-size: 12px; color: #f87171; margin-bottom: 10px; }
+
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #1e2433; }
+  .btn-cancel { background: #1e2433; color: #94a3b8; font-size: 13px; padding: 7px 16px; border-radius: 6px; border: none; cursor: pointer; }
+  .btn-save { background: #2563eb; color: #fff; font-size: 13px; padding: 7px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 500; }
+  .btn-save:hover { opacity: 0.85; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0a0d14; }
+  ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div id="app-header"></div>
+<script src="/static/js/header.js"></script>
+
+<div class="toolbar-wrap">
+<div class="toolbar">
+  <span class="toolbar-title" id="task-count">Loading...</span>
+  <button class="btn-new" onclick="openModal(null)">+ New Job</button>
+</div>
+</div>
+
+<div class="task-list" id="task-list">
+  <div class="empty">Loading...</div>
+</div>
+
+<!-- Create / Edit Modal -->
+<div id="modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title">New Cron Job</div>
+
+    <div class="form-row">
+      <div class="form-group" style="flex:2;">
+        <label class="form-label">Job name</label>
+        <input id="f-name" class="form-input" type="text" placeholder="Auto refactor" />
+      </div>
+      <div class="form-group" style="flex:1;">
+        <label class="form-label">Max open MRs</label>
+        <input id="f-max-open" class="form-input" type="number" min="1" max="20" value="1" />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Prompt</label>
+      <textarea id="f-prompt" class="form-input" placeholder="/refactor ..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">
+        Cron expression
+        <span style="color:#475569;font-weight:400;margin-left:4px;">min hour dom month dow</span>
+      </label>
+      <input id="f-cron" class="form-input" type="text" placeholder="0 * * * *" />
+      <div id="cron-preview" style="margin-top:5px;font-size:12px;color:#60a5fa;min-height:16px;"></div>
+      <div class="preset-chips">
+        <span class="chip" onclick="setCron('*/30 * * * *')">Every 30 min</span>
+        <span class="chip" onclick="setCron('0 * * * *')">Hourly</span>
+        <span class="chip" onclick="setCron('0 */2 * * *')">Every 2 h</span>
+        <span class="chip" onclick="setCron('0 */6 * * *')">Every 6 h</span>
+        <span class="chip" onclick="setCron('0 0 * * *')">Daily midnight</span>
+        <span class="chip" onclick="setCron('0 9 * * 1-5')">Weekdays 9 am</span>
+        <span class="chip" onclick="setCron('0 0 * * 0')">Sundays</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">MR labels (comma-separated)</label>
+      <input id="f-labels" class="form-input" type="text" placeholder="refactor, docs" />
+    </div>
+
+    <div class="form-check-row">
+      <label class="form-check"><input id="f-enabled" type="checkbox" checked /> Enabled</label>
+      <label class="form-check"><input id="f-plan" type="checkbox" /> Plan mode</label>
+    </div>
+
+    <div id="form-error" class="form-error"></div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveTask()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+let tasks = [];
+let editingId = null;
+
+// ---- Data loading ----
+
+async function fetchTasks() {
+  try {
+    const res = await fetch(`${API}/cron-tasks`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    tasks = await res.json();
+    render();
+  } catch (e) {
+    document.getElementById('task-list').innerHTML = `<div class="empty" style="color:#f87171;">Failed to load: ${e.message}</div>`;
+    document.getElementById('task-count').textContent = 'Load failed';
+  }
+}
+
+// ---- Rendering ----
+
+function render() {
+  const el = document.getElementById('task-list');
+  const countEl = document.getElementById('task-count');
+  countEl.textContent = `${tasks.length} cron job${tasks.length !== 1 ? 's' : ''}`;
+
+  if (!tasks.length) {
+    el.innerHTML = `<div class="empty">No cron jobs yet — click "+ New Job" to create one.</div>`;
+    return;
+  }
+
+  el.innerHTML = tasks.map(t => `
+    <div class="task-card">
+      <div class="card-top">
+        <span class="card-name">${esc(t.name)}</span>
+        <span class="badge ${t.enabled ? 'badge-on' : 'badge-off'}">${t.enabled ? 'Enabled' : 'Disabled'}</span>
+        <div class="card-actions">
+          <button class="btn btn-trigger" onclick="triggerTask('${t.id}')">Run now</button>
+          <button class="btn btn-edit" onclick="openModal('${t.id}')">Edit</button>
+          <button class="btn btn-delete" onclick="deleteTask('${t.id}')">Delete</button>
+        </div>
+      </div>
+      <div class="card-meta">
+        <span class="meta-item"><span class="cron-expr">${esc(t.cron_expr)}</span> <span class="cron-desc">${esc(describeCron(t.cron_expr))}</span></span>
+        <span class="meta-item">Last run: ${t.last_run_str || 'never'}</span>
+        <span class="meta-item">Next run: ${t.next_run_str || '-'}</span>
+        <span class="meta-item">Max open MRs: ${t.max_open}</span>
+        ${t.mr_labels && t.mr_labels.length ? `<span class="meta-item">Labels: ${t.mr_labels.map(esc).join(', ')}</span>` : ''}
+        ${t.use_plan_mode ? `<span class="meta-item">Plan mode</span>` : ''}
+      </div>
+      <div class="card-prompt">${esc(t.prompt)}</div>
+    </div>
+  `).join('');
+}
+
+// ---- Modal ----
+
+function openModal(id) {
+  const task = id ? tasks.find(t => t.id === id) : null;
+  editingId = task ? task.id : null;
+
+  document.getElementById('modal-title').textContent = task ? 'Edit Cron Job' : 'New Cron Job';
+  document.getElementById('f-name').value = task ? task.name : '';
+  document.getElementById('f-prompt').value = task ? task.prompt : '';
+  document.getElementById('f-cron').value = task ? task.cron_expr : '0 * * * *';
+  document.getElementById('f-enabled').checked = task ? task.enabled : true;
+  document.getElementById('f-max-open').value = task ? (task.max_open ?? task.max_concurrent ?? 1) : 1;
+  document.getElementById('f-plan').checked = task ? task.use_plan_mode : false;
+  document.getElementById('f-labels').value = task && task.mr_labels ? task.mr_labels.join(', ') : '';
+  document.getElementById('form-error').style.display = 'none';
+  document.getElementById('cron-preview').textContent = describeCron(document.getElementById('f-cron').value);
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('f-name').focus();
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  editingId = null;
+}
+
+function setCron(expr) {
+  document.getElementById('f-cron').value = expr;
+  document.getElementById('cron-preview').textContent = describeCron(expr);
+  document.getElementById('f-cron').focus();
+}
+
+async function saveTask() {
+  const name = document.getElementById('f-name').value.trim();
+  const prompt = document.getElementById('f-prompt').value.trim();
+  const cron_expr = document.getElementById('f-cron').value.trim();
+  const labelsRaw = document.getElementById('f-labels').value.trim();
+  const mr_labels = labelsRaw ? labelsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+  const errEl = document.getElementById('form-error');
+  if (!name) return showErr('Job name is required');
+  if (!prompt) return showErr('Prompt is required');
+  if (!cron_expr) return showErr('Cron expression is required');
+  errEl.style.display = 'none';
+
+  const body = {
+    name, prompt, cron_expr, mr_labels,
+    enabled: document.getElementById('f-enabled').checked,
+    max_open: parseInt(document.getElementById('f-max-open').value) || 1,
+    use_plan_mode: document.getElementById('f-plan').checked,
+  };
+
+  try {
+    const url = editingId ? `${API}/cron-tasks/${editingId}` : `${API}/cron-tasks`;
+    const res = await fetch(url, {
+      method: editingId ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      return showErr(data.detail || 'Save failed');
+    }
+    closeModal();
+    await fetchTasks();
+  } catch (e) {
+    showErr('Save failed: ' + e.message);
+  }
+}
+
+function showErr(msg) {
+  const el = document.getElementById('form-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ---- Operations ----
+
+async function deleteTask(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!confirm(`Delete "${task ? task.name : id}"?`)) return;
+  const res = await fetch(`${API}/cron-tasks/${id}`, { method: 'DELETE' });
+  if (res.ok) await fetchTasks();
+}
+
+async function triggerTask(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!confirm(`Run "${task ? task.name : id}" now?`)) return;
+  const res = await fetch(`${API}/cron-tasks/${id}/trigger`, { method: 'POST' });
+  if (res.ok) {
+    await fetchTasks();
+    alert('Triggered — check the task list for progress.');
+  }
+}
+
+// ---- Cron description ----
+
+function describeCron(expr) {
+  if (!expr) return '';
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length !== 5) return 'Invalid format (expected: min hour dom month dow)';
+
+  const [min, hour, dom, month, dow] = parts;
+  const isAny = s => s === '*';
+  const isFixed = s => /^\d+$/.test(s);
+  const isStep = s => /^\*\/\d+$/.test(s);
+  const stepOf = s => parseInt(s.slice(2));
+
+  const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const MONTHS = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  function timeStr() {
+    return `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+  }
+
+  if (expr.trim() === '* * * * *') return 'Every minute';
+
+  if (isStep(min) && isAny(hour) && isAny(dom) && isAny(month) && isAny(dow))
+    return `Every ${stepOf(min)} minutes`;
+
+  if (isFixed(min) && isAny(hour) && isAny(dom) && isAny(month) && isAny(dow))
+    return min === '0' ? 'Every hour' : `Every hour at :${min}`;
+
+  if (isStep(hour) && min === '0' && isAny(dom) && isAny(month) && isAny(dow))
+    return `Every ${stepOf(hour)} hours`;
+
+  if (isFixed(min) && isFixed(hour) && isAny(dom) && isAny(month) && isAny(dow))
+    return `Daily at ${timeStr()}`;
+
+  if (isFixed(min) && isFixed(hour) && isAny(dom) && isAny(month) && isFixed(dow)) {
+    const d = parseInt(dow) % 7;
+    return `${DAYS[d]}s at ${timeStr()}`;
+  }
+
+  if (isFixed(min) && isFixed(hour) && isAny(dom) && isAny(month) && dow === '1-5')
+    return `Weekdays at ${timeStr()}`;
+
+  if (isFixed(min) && isFixed(hour) && isAny(dom) && isAny(month) && (dow === '6,0' || dow === '0,6'))
+    return `Weekends at ${timeStr()}`;
+
+  if (isFixed(min) && isFixed(hour) && isFixed(dom) && isAny(month) && isAny(dow))
+    return `Monthly on day ${dom} at ${timeStr()}`;
+
+  if (isFixed(min) && isFixed(hour) && isFixed(dom) && isFixed(month) && isAny(dow))
+    return `Yearly on ${MONTHS[parseInt(month)]} ${dom} at ${timeStr()}`;
+
+  return 'Custom';
+}
+
+// ---- Utilities ----
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+document.getElementById('f-cron').addEventListener('input', function() {
+  document.getElementById('cron-preview').textContent = describeCron(this.value.trim());
+});
+
+fetchTasks();
+</script>
+</body>
+</html>

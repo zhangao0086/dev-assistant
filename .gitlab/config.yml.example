@@ -1,0 +1,28 @@
+# GitLab CLI (glab) configuration
+# Copy this file to config.yml and fill in your token
+
+git_protocol: ssh
+editor:
+browser:
+glamour_style: dark
+check_update: true
+display_hyperlinks: false
+host: gitlab.com
+no_prompt: false
+telemetry: false
+
+hosts:
+    # For gitlab.com (public)
+    gitlab.com:
+        api_protocol: https
+        api_host: gitlab.com
+        token: YOUR_GITLAB_TOKEN_HERE
+        container_registry_domains: gitlab.com,gitlab.com:443,registry.gitlab.com
+
+    # For self-hosted GitLab instance (optional)
+    # your.gitlab.instance.com:
+    #     api_protocol: https
+    #     api_host: your.gitlab.instance.com
+    #     token: YOUR_SELF_HOSTED_TOKEN_HERE
+    #     git_protocol: https
+    #     user: your-username
