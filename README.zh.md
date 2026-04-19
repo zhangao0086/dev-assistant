@@ -4,6 +4,12 @@
 
 [English](./README.md) · [架构说明](./ARCHITECTURE.md)
 
+## 截图
+
+| 桌面端 | 移动端 |
+|--------|--------|
+| ![桌面端界面](./assets/pc-screenshot.png) | ![移动端界面](./assets/mobile-screenshot.png) |
+
 ---
 
 > ### ⚠️ 运行前须知

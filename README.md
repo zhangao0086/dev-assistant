@@ -4,6 +4,12 @@ An automated development task management system powered by Claude Code. Submit t
 
 [中文文档](./README.zh.md) · [Architecture](./ARCHITECTURE.md)
 
+## Screenshots
+
+| Desktop | Mobile |
+|---------|--------|
+| ![Desktop UI](./assets/pc-screenshot.png) | ![Mobile UI](./assets/mobile-screenshot.png) |
+
 ---
 
 > ### ⚠️ Before you run this
