@@ -868,6 +868,10 @@ Read `.claude/PLAN.md` first, then follow its steps to complete the implementati
         env.pop("CLAUDECODE", None)
         env["ANTHROPIC_SKIP_TOKEN_COUNT"] = "1"
 
+        # Set GLAB_CONFIG_DIR so glab uses .gitlab/config.yml
+        glab_config_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".gitlab")
+        env["GLAB_CONFIG_DIR"] = glab_config_dir
+
         # Prepare labels
         labels = ["dev-assistant"]
         if session.mr_labels:
