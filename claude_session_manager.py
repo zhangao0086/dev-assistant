@@ -743,6 +743,7 @@ Read `.claude/PLAN.md` first, then follow its steps to complete the implementati
             env = os.environ.copy()
             env.pop("CLAUDECODE", None)
             env["ANTHROPIC_SKIP_TOKEN_COUNT"] = "1"
+            env["GLAB_CONFIG_DIR"] = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".gitlab")
 
             process = subprocess.Popen(
                 cmd,
