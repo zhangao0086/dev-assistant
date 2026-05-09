@@ -18,15 +18,15 @@ An automated development task management system powered by Claude Code. Submit t
 >
 > - **No authentication** is built in.
 > - The server binds to `0.0.0.0:8089` by default — do **not** expose it to the public internet or untrusted networks.
-> - All code under `TARGET_PROJECT_PATH` may be modified, committed, and pushed automatically by the AI. Use a dedicated repository you are prepared to review carefully.
+> - All code under your configured repositories may be modified, committed, and pushed automatically by the AI. Use dedicated repositories you are prepared to review carefully.
 > - To restrict access to localhost only, change the bind host in [server.py](./server.py) and [manage.sh](./manage.sh) from `0.0.0.0` to `127.0.0.1`.
 
 ---
 
 ## How it works
 
-1. You submit a task description ("add input validation to the user API")
-2. Dev Assistant creates a new branch + git worktree inside your target repository
+1. You submit a task description ("add input validation to the user API") and select the target repository
+2. Dev Assistant creates a new branch + git worktree inside that repository
 3. Claude Code runs in that worktree and writes the code
 4. Claude commits the changes and opens a Merge/Pull Request
 5. You review the MR/PR and merge or close it
@@ -73,9 +73,11 @@ Verify: `uvicorn --version` should print a version number.
 
 ### 2. Configure
 
-Start the server first (step 5), then open **http://localhost:8089/settings.html** to set `TARGET_PROJECT_PATH` and other options through the UI.
+Start the server first (step 5), then open **http://localhost:8089/settings.html** to add your repositories and configure options through the UI.
 
-> **Pick this repository carefully.** Claude will create branches, commit, and push here on its own. Use a project you own or have explicit authorisation to modify, and make sure its remote is one you're happy to receive auto-generated MRs/PRs on.
+Dev Assistant supports **multiple repositories** — each with its own tasks, cron jobs, and MR/PR submissions. Add as many repos as you need via the Settings page.
+
+> **Pick repositories carefully.** Claude will create branches, commit, and push in these repos on its own. Use projects you own or have explicit authorisation to modify, and make sure their remotes are ones you're happy to receive auto-generated MRs/PRs on.
 
 ### 3. Configure your VCS CLI (for MR/PR creation)
 
@@ -141,7 +143,7 @@ In the Web UI, type a task description and click **Submit**. Watch the logs stre
 If you don't have `glab` or `gh` configured, tasks will fail at the COMMITTING step. To use Dev Assistant without a VCS provider:
 
 - Tasks will succeed through the DEVELOPING step and write code to the worktree
-- Cancel the task before it reaches COMMITTING, then inspect `TARGET_PROJECT_PATH/.worktrees/task-<id>/` manually
+- Cancel the task before it reaches COMMITTING, then inspect `<repo-path>/.worktrees/task-<id>/` manually
 - Or: contribute a "skip MR creation" option — see [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ## Usage
@@ -193,16 +195,28 @@ Configure recurring automated tasks on the `/cron` page using standard cron expr
 
 All configuration is managed through the **Settings page** (`/settings.html`). Settings are stored in `~/.dev-assistant/config.json` and survive server restarts. Shell environment variables take precedence over saved config if both are set.
 
-Changes to `PORT`, `DATA_DIR`, and `TARGET_PROJECT_PATH` require a server restart to take effect.
+Changes to `PORT` and `DATA_DIR` require a server restart to take effect.
+
+### Global settings
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `TARGET_PROJECT_PATH` | **Yes** | — | Absolute path to the git repository Claude will work in |
-| `DEFAULT_BRANCH` | No | `master` | Default branch name — set to `main` if your repo uses main |
-| `DATA_DIR` | No | `~/.dev-assistant` | Directory for task data and session logs |
 | `PORT` | No | `8089` | HTTP port |
-| `GLAB_CONFIG_DIR` | No | `.gitlab/` | Directory containing `glab`'s `config.yml` |
-| `GH_CONFIG_DIR` | No | `.github/` | Directory containing `gh`'s `config.yml` |
+| `DATA_DIR` | No | `~/.dev-assistant` | Directory for task data and session logs |
+| `GLAB_CONFIG_DIR` | No | `.gitlab/` | Global default `glab` config directory |
+| `GH_CONFIG_DIR` | No | `.github/` | Global default `gh` config directory |
+
+### Per-repository settings
+
+Repositories are managed via **Settings → Repositories** or the `POST /repos` API. Each repo has:
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `name` | Yes | — | Display name for the repo |
+| `path` | Yes | — | Absolute path to the git repository |
+| `default_branch` | No | `master` | Default branch name (`main`, `master`, etc.) |
+| `glab_config_dir` | No | *(global fallback)* | Per-repo glab config directory |
+| `gh_config_dir` | No | *(global fallback)* | Per-repo gh config directory |
 
 ---
 
@@ -228,13 +242,15 @@ dev-assistant/
 Runtime directories (created automatically):
 
 ```
-~/.dev-assistant/           # Config and task data (outside the project, safe from git)
-├── config.json             # All settings (edited via /settings.html)
-├── dev-tasks.json          # Task database
-├── cron-tasks.json         # Cron definitions
-└── logs/<session-id>.jsonl # Full conversation logs per task
-logs/                       # Server logs (daily rotation, git-ignored)
-run/                        # PID file (git-ignored)
+~/.dev-assistant/               # Config and task data (outside the project, safe from git)
+├── config.json                 # Global settings + repos array (edited via /settings.html)
+└── repos/
+    └── <repo-id>/
+        ├── dev-tasks.json      # Task database for this repo
+        ├── cron-tasks.json     # Cron definitions for this repo
+        └── logs/<session-id>.jsonl  # Full conversation logs per task
+logs/                           # Server logs (daily rotation, git-ignored)
+run/                            # PID file (git-ignored)
 ```
 
 ---
@@ -247,9 +263,9 @@ run/                        # PID file (git-ignored)
 pip install -r requirements.txt
 ```
 
-**`manage.sh start` says "TARGET_PROJECT_PATH is not set"**
+**`manage.sh start` says "No repositories configured"**
 
-Open `http://localhost:8089/settings.html` and set `TARGET_PROJECT_PATH`, then restart the server.
+Open `http://localhost:8089/settings.html` and add at least one repository in the Repositories section.
 
 **Server starts but the first task fails immediately**
 
@@ -260,7 +276,7 @@ Check the server log:
 
 Common causes:
 - `claude` CLI not installed or not authenticated → run `claude --version` and `claude login`
-- `TARGET_PROJECT_PATH` doesn't have a `master` branch → set `DEFAULT_BRANCH=main` in Settings if your repo uses `main`
+- Repository doesn't have a `master` branch → set `default_branch` to `main` in Settings if your repo uses `main`
 - `glab` or `gh` not authenticated → check **Settings → VCS Authentication Status** for the exact error and fix command
 
 **Task stuck in DEVELOPING forever**
@@ -280,12 +296,12 @@ Dev Assistant is a **single-user, local-machine** tool. It was not designed for 
 **What the server does:**
 - Runs as your user, with no login or access control
 - Binds to `0.0.0.0:8089` by default (reachable from your LAN)
-- Spawns `claude` subprocesses with broad tool permissions (`Bash`, `Write`, `Edit`, etc.) inside `TARGET_PROJECT_PATH`
-- Lets Claude run arbitrary shell commands, commit code, and push to your remote
+- Spawns `claude` subprocesses with broad tool permissions (`Bash`, `Write`, `Edit`, etc.) inside your configured repositories
+- Lets Claude run arbitrary shell commands, commit code, and push to your remotes
 
 **Recommendations:**
 - Run on `localhost` only — edit [server.py:402](./server.py#L402) and [manage.sh:74](./manage.sh#L74) to bind `127.0.0.1` before using this in a shared-network environment.
-- Use a dedicated `TARGET_PROJECT_PATH` you're prepared to see mutated by the AI. Don't point it at production code.
+- Use dedicated repositories you're prepared to see mutated by the AI. Don't point it at production code.
 - Review every MR/PR before merging — treat the AI's output as untrusted.
 - Never store `.gitlab/config.yml` in version control (it is git-ignored by default).
 - Session logs in `$DATA_DIR/logs/` contain the full Claude conversation, including all code and tool outputs. Treat them as sensitive.
