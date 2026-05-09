@@ -105,6 +105,11 @@
     </div>
 
     <div class="form-group">
+      <label class="form-label">Repository</label>
+      <select id="f-repo" class="form-input" style="cursor:pointer;"></select>
+    </div>
+
+    <div class="form-group">
       <label class="form-label">Prompt</label>
       <textarea id="f-prompt" class="form-input" placeholder="/refactor ..."></textarea>
     </div>
@@ -155,7 +160,8 @@ let editingId = null;
 
 async function fetchTasks() {
   try {
-    const res = await fetch(`${API}/cron-tasks`);
+    const repoParam = window.selectedRepoId ? `?repo_id=${window.selectedRepoId}` : '';
+    const res = await fetch(`${API}/cron-tasks${repoParam}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     tasks = await res.json();
     render();
@@ -182,6 +188,7 @@ function render() {
       <div class="card-top">
         <span class="card-name">${esc(t.name)}</span>
         <span class="badge ${t.enabled ? 'badge-on' : 'badge-off'}">${t.enabled ? 'Enabled' : 'Disabled'}</span>
+        ${!window.selectedRepoId && t.repo_name ? `<span class="badge" style="background:#1e2433;color:#64748b;">${esc(t.repo_name)}</span>` : ''}
         <div class="card-actions">
           <button class="btn btn-trigger" onclick="triggerTask('${t.id}')">Run now</button>
           <button class="btn btn-edit" onclick="openModal('${t.id}')">Edit</button>
@@ -203,6 +210,18 @@ function render() {
 
 // ---- Modal ----
 
+function populateRepoSelect(selectedRepoId) {
+  const sel = document.getElementById('f-repo');
+  const repos = window.repos || [];
+  sel.innerHTML = repos.map(r =>
+    `<option value="${r.id}"${r.id === selectedRepoId ? ' selected' : ''}>${esc(r.name)} (${esc(r.path)})</option>`
+  ).join('');
+  if (!selectedRepoId && repos.length > 0) {
+    // Default to header-selected repo or first repo
+    sel.value = window.selectedRepoId || repos[0].id;
+  }
+}
+
 function openModal(id) {
   const task = id ? tasks.find(t => t.id === id) : null;
   editingId = task ? task.id : null;
@@ -217,6 +236,11 @@ function openModal(id) {
   document.getElementById('f-labels').value = task && task.mr_labels ? task.mr_labels.join(', ') : '';
   document.getElementById('form-error').style.display = 'none';
   document.getElementById('cron-preview').textContent = describeCron(document.getElementById('f-cron').value);
+
+  populateRepoSelect(task ? task.repo_id : '');
+  const repoSel = document.getElementById('f-repo');
+  repoSel.disabled = !!editingId;  // read-only when editing
+
   document.getElementById('modal').classList.add('open');
   document.getElementById('f-name').focus();
 }
@@ -238,11 +262,13 @@ async function saveTask() {
   const cron_expr = document.getElementById('f-cron').value.trim();
   const labelsRaw = document.getElementById('f-labels').value.trim();
   const mr_labels = labelsRaw ? labelsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const repo_id = document.getElementById('f-repo').value;
 
   const errEl = document.getElementById('form-error');
   if (!name) return showErr('Job name is required');
   if (!prompt) return showErr('Prompt is required');
   if (!cron_expr) return showErr('Cron expression is required');
+  if (!repo_id && !editingId) return showErr('Repository is required');
   errEl.style.display = 'none';
 
   const body = {
@@ -251,6 +277,9 @@ async function saveTask() {
     max_open: parseInt(document.getElementById('f-max-open').value) || 1,
     use_plan_mode: document.getElementById('f-plan').checked,
   };
+  if (!editingId) {
+    body.repo_id = repo_id;
+  }
 
   try {
     const url = editingId ? `${API}/cron-tasks/${editingId}` : `${API}/cron-tasks`;
@@ -367,6 +396,7 @@ document.getElementById('f-cron').addEventListener('input', function() {
   document.getElementById('cron-preview').textContent = describeCron(this.value.trim());
 });
 
+window.onRepoChanged = function () { fetchTasks(); };
 fetchTasks();
 </script>
 </body>

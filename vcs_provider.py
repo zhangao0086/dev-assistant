@@ -45,7 +45,7 @@ class VCSProvider(ABC):
     # -- factory helper ------------------------------------------------------
 
     @staticmethod
-    def detect(repo_path: str) -> "VCSProvider":
+    def detect(repo_path: str, glab_config_dir: str = "", gh_config_dir: str = "") -> "VCSProvider":
         """Return the right provider by inspecting the git remote URL."""
         try:
             result = subprocess.run(
@@ -59,9 +59,9 @@ class VCSProvider(ABC):
             remote_url = ""
 
         if "github.com" in remote_url:
-            return GitHubProvider(repo_path)
+            return GitHubProvider(repo_path, gh_config_dir)
         # Default to GitLab (covers self-hosted GitLab instances too)
-        return GitLabProvider(repo_path)
+        return GitLabProvider(repo_path, glab_config_dir)
 
     # -- abstract operations -------------------------------------------------
 
@@ -107,11 +107,10 @@ class VCSProvider(ABC):
 class GitLabProvider(VCSProvider):
     """Calls glab for all VCS operations."""
 
-    def __init__(self, repo_path: str):
+    def __init__(self, repo_path: str, config_dir: str = ""):
         super().__init__(repo_path)
-        # Allow override via env; fall back to .gitlab/ next to this file
         _default_config = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".gitlab")
-        self._config_dir = os.environ.get("GLAB_CONFIG_DIR", _default_config)
+        self._config_dir = config_dir or os.environ.get("GLAB_CONFIG_DIR", _default_config)
 
     def _env(self) -> dict:
         env = os.environ.copy()
@@ -199,10 +198,10 @@ class GitLabProvider(VCSProvider):
 class GitHubProvider(VCSProvider):
     """Calls gh (GitHub CLI) for all VCS operations."""
 
-    def __init__(self, repo_path: str):
+    def __init__(self, repo_path: str, config_dir: str = ""):
         super().__init__(repo_path)
         _default_config = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".github")
-        self._config_dir = os.environ.get("GH_CONFIG_DIR", _default_config)
+        self._config_dir = config_dir or os.environ.get("GH_CONFIG_DIR", _default_config)
 
     def _env(self) -> dict:
         env = os.environ.copy()

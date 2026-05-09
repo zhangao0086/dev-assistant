@@ -26,7 +26,6 @@
   .field:last-child { border-bottom: none; }
   .field-label { font-size: 13px; font-weight: 500; color: #cbd5e1; display: flex; align-items: center; gap: 8px; }
   .field-label .badge { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .badge-required { background: #3b1515; color: #f87171; }
   .badge-restart { background: #1e2c1a; color: #86efac; }
   .field-desc { font-size: 12px; color: #64748b; }
   .field-input { margin-top: 2px; }
@@ -66,8 +65,28 @@
   .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
   .btn-ghost { background: transparent; color: #94a3b8; border: 1px solid #2d3748; }
   .btn-ghost:hover:not(:disabled) { background: #1e2433; color: #e2e8f0; }
+  .btn-danger { background: #7f1d1d; color: #fca5a5; }
+  .btn-danger:hover:not(:disabled) { background: #991b1b; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
 
   #save-status { font-size: 13px; color: #64748b; }
+
+  .repo-card { padding: 14px 20px; border-bottom: 1px solid #1e2433; display: flex; align-items: center; gap: 12px; }
+  .repo-card:last-child { border-bottom: none; }
+  .repo-info { flex: 1; min-width: 0; }
+  .repo-name { font-size: 14px; font-weight: 600; color: #e2e8f0; }
+  .repo-path { font-size: 12px; color: #64748b; font-family: "SF Mono", "Fira Code", monospace; word-break: break-all; }
+  .repo-branch { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+  .repo-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+  .add-repo-form { padding: 16px 20px; border-top: 1px solid #1e2433; display: none; }
+  .add-repo-form.open { display: block; }
+  .edit-repo-form { padding: 14px 20px; border-bottom: 1px solid #1e2433; background: #0f1117; }
+  .form-row { display: flex; gap: 10px; margin-bottom: 10px; }
+  .form-row .form-field { flex: 1; }
+  .form-field label { font-size: 11px; color: #94a3b8; display: block; margin-bottom: 4px; }
+  .form-field input { width: 100%; background: #0f1117; border: 1px solid #2d3748; border-radius: 6px; color: #e2e8f0; font-size: 12px; padding: 6px 10px; outline: none; font-family: "SF Mono", "Fira Code", monospace; }
+  .form-field input:focus { border-color: #3b82f6; }
 </style>
 </head>
 <body>
@@ -84,7 +103,7 @@
 
   <div id="restart-banner" style="display:none" class="alert alert-info">
     <span class="alert-icon">ℹ</span>
-    Settings saved. Restart the server for PORT, DATA_DIR, or TARGET_PROJECT_PATH changes to take effect.
+    Settings saved. Restart the server for PORT or DATA_DIR changes to take effect.
   </div>
 
   <div id="save-ok-banner" style="display:none" class="alert alert-success">
@@ -92,30 +111,56 @@
     Settings saved successfully.
   </div>
 
+  <!-- Repositories -->
+  <div class="section">
+    <div class="section-title">Repositories</div>
+    <div class="card">
+      <div id="repos-list">
+        <div style="padding:20px;color:#475569;font-size:13px;">Loading...</div>
+      </div>
+      <div id="add-repo-form" class="add-repo-form">
+        <div class="form-row">
+          <div class="form-field" style="flex:1;">
+            <label>Name</label>
+            <input type="text" id="new-repo-name" placeholder="my-app">
+          </div>
+          <div class="form-field" style="flex:1;">
+            <label>Default Branch</label>
+            <input type="text" id="new-repo-branch" placeholder="master" value="master">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field" style="flex:1;">
+            <label>Path</label>
+            <input type="text" id="new-repo-path" placeholder="/home/user/projects/my-app">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field" style="flex:1;">
+            <label>GLAB Config Dir (optional, per-repo override)</label>
+            <input type="text" id="new-repo-glab" placeholder="">
+          </div>
+          <div class="form-field" style="flex:1;">
+            <label>GH Config Dir (optional, per-repo override)</label>
+            <input type="text" id="new-repo-gh" placeholder="">
+          </div>
+        </div>
+        <div id="add-repo-error" style="font-size:12px;color:#f87171;margin-bottom:8px;display:none;"></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary btn-sm" onclick="submitNewRepo()">Add Repository</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleAddForm()">Cancel</button>
+        </div>
+      </div>
+      <div style="padding:12px 20px;border-top:1px solid #1e2433;">
+        <button class="btn btn-ghost btn-sm" id="btn-add-repo" onclick="toggleAddForm()">+ Add Repository</button>
+      </div>
+    </div>
+  </div>
+
   <!-- General -->
   <div class="section">
     <div class="section-title">General</div>
     <div class="card">
-
-      <div class="field">
-        <div class="field-label">
-          TARGET_PROJECT_PATH
-          <span class="badge badge-required">Required</span>
-          <span class="badge badge-restart">Restart</span>
-        </div>
-        <div class="field-desc">Absolute path to the git repository where Claude creates branches and writes code.</div>
-        <div class="field-input">
-          <input type="text" id="TARGET_PROJECT_PATH" placeholder="/home/alice/projects/my-app">
-        </div>
-      </div>
-
-      <div class="field">
-        <div class="field-label">DEFAULT_BRANCH</div>
-        <div class="field-desc">Default branch name in the target repository (usually <code style="background:#0f1117;border:1px solid #2d3748;border-radius:4px;padding:1px 5px;font-family:monospace;font-size:11px;color:#94a3b8">master</code> or <code style="background:#0f1117;border:1px solid #2d3748;border-radius:4px;padding:1px 5px;font-family:monospace;font-size:11px;color:#94a3b8">main</code>).</div>
-        <div class="field-input">
-          <input type="text" id="DEFAULT_BRANCH" placeholder="master">
-        </div>
-      </div>
 
       <div class="field">
         <div class="field-label">
@@ -144,12 +189,12 @@
 
   <!-- VCS Config -->
   <div class="section">
-    <div class="section-title">VCS CLI Config Directories</div>
+    <div class="section-title">VCS CLI Config Directories (Global Defaults)</div>
     <div class="card">
 
       <div class="field">
         <div class="field-label">GLAB_CONFIG_DIR</div>
-        <div class="field-desc">Directory containing the glab (GitLab CLI) <code style="background:#0f1117;border:1px solid #2d3748;border-radius:4px;padding:1px 5px;font-family:monospace;font-size:11px;color:#94a3b8">config.yml</code> with your GitLab token.</div>
+        <div class="field-desc">Default directory containing glab CLI <code style="background:#0f1117;border:1px solid #2d3748;border-radius:4px;padding:1px 5px;font-family:monospace;font-size:11px;color:#94a3b8">config.yml</code>. Per-repo overrides take precedence.</div>
         <div class="field-input">
           <input type="text" id="GLAB_CONFIG_DIR" placeholder=".gitlab/">
         </div>
@@ -157,7 +202,7 @@
 
       <div class="field">
         <div class="field-label">GH_CONFIG_DIR</div>
-        <div class="field-desc">Directory containing the gh (GitHub CLI) <code style="background:#0f1117;border:1px solid #2d3748;border-radius:4px;padding:1px 5px;font-family:monospace;font-size:11px;color:#94a3b8">config.yml</code> with your GitHub token.</div>
+        <div class="field-desc">Default directory containing gh CLI <code style="background:#0f1117;border:1px solid #2d3748;border-radius:4px;padding:1px 5px;font-family:monospace;font-size:11px;color:#94a3b8">config.yml</code>. Per-repo overrides take precedence.</div>
         <div class="field-input">
           <input type="text" id="GH_CONFIG_DIR" placeholder=".github/">
         </div>
@@ -201,7 +246,10 @@
 </div>
 
 <script>
-const FIELDS = ['TARGET_PROJECT_PATH','DEFAULT_BRANCH','DATA_DIR','PORT','GLAB_CONFIG_DIR','GH_CONFIG_DIR'];
+const FIELDS = ['DATA_DIR','PORT','GLAB_CONFIG_DIR','GH_CONFIG_DIR'];
+let reposList = [];
+
+// ---- Settings ----
 
 async function loadSettings() {
   try {
@@ -212,8 +260,8 @@ async function loadSettings() {
       const el = document.getElementById(k);
       if (el && data[k] != null) el.value = data[k];
     });
-    if (data._config_error) {
-      document.getElementById('config-error-text').textContent = data._config_error;
+    if (!data._has_repos) {
+      document.getElementById('config-error-text').textContent = 'No repositories configured. Add one below to get started.';
       document.getElementById('config-error-banner').style.display = 'flex';
     }
   } catch (e) { console.error(e); }
@@ -239,7 +287,6 @@ async function saveSettings() {
     });
     const data = await res.json();
     if (data.ok) {
-      document.getElementById('config-error-banner').style.display = 'none';
       document.getElementById('save-ok-banner').style.display = 'flex';
       if (data.restart_required) {
         document.getElementById('restart-banner').style.display = 'flex';
@@ -256,6 +303,192 @@ async function saveSettings() {
   }
 }
 
+// ---- Repos management ----
+
+async function loadRepos() {
+  try {
+    const res = await fetch('/repos');
+    if (!res.ok) return;
+    reposList = await res.json();
+    renderRepos();
+  } catch (e) {}
+}
+
+function renderRepos() {
+  const el = document.getElementById('repos-list');
+  if (!reposList.length) {
+    el.innerHTML = `<div style="padding:20px;color:#475569;font-size:13px;text-align:center;">No repositories configured yet.</div>`;
+    return;
+  }
+  el.innerHTML = reposList.map(r => `
+    <div class="repo-card" id="repo-card-${r.id}">
+      <div class="repo-info">
+        <div class="repo-name">${esc(r.name)}</div>
+        <div class="repo-path">${esc(r.path)}</div>
+        <div class="repo-branch">Branch: ${esc(r.default_branch)}${r.glab_config_dir ? ' · glab: ' + esc(r.glab_config_dir) : ''}${r.gh_config_dir ? ' · gh: ' + esc(r.gh_config_dir) : ''}</div>
+        ${r.error ? `<div style="font-size:11px;color:#f87171;margin-top:2px;">${esc(r.error)}</div>` : ''}
+      </div>
+      <div class="repo-actions">
+        <button class="btn btn-ghost btn-sm" onclick="editRepo('${r.id}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRepo('${r.id}','${esc(r.name)}')">Remove</button>
+      </div>
+    </div>
+    <div class="edit-repo-form" id="edit-form-${r.id}" style="display:none;padding:14px 20px;border-bottom:1px solid #1e2433;background:#0f1117;">
+      <div class="form-row">
+        <div class="form-field" style="flex:1;">
+          <label>Name</label>
+          <input type="text" id="edit-name-${r.id}" value="${esc(r.name)}">
+        </div>
+        <div class="form-field" style="flex:1;">
+          <label>Default Branch</label>
+          <input type="text" id="edit-branch-${r.id}" value="${esc(r.default_branch)}">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field" style="flex:1;">
+          <label>Path</label>
+          <input type="text" id="edit-path-${r.id}" value="${esc(r.path)}">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field" style="flex:1;">
+          <label>GLAB Config Dir (optional)</label>
+          <input type="text" id="edit-glab-${r.id}" value="${esc(r.glab_config_dir || '')}">
+        </div>
+        <div class="form-field" style="flex:1;">
+          <label>GH Config Dir (optional)</label>
+          <input type="text" id="edit-gh-${r.id}" value="${esc(r.gh_config_dir || '')}">
+        </div>
+      </div>
+      <div id="edit-error-${r.id}" style="font-size:12px;color:#f87171;margin-bottom:8px;display:none;"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary btn-sm" onclick="saveRepo('${r.id}')">Save</button>
+        <button class="btn btn-ghost btn-sm" onclick="cancelEditRepo('${r.id}')">Cancel</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleAddForm() {
+  const form = document.getElementById('add-repo-form');
+  form.classList.toggle('open');
+  document.getElementById('add-repo-error').style.display = 'none';
+  if (form.classList.contains('open')) {
+    document.getElementById('new-repo-name').focus();
+  }
+}
+
+function editRepo(id) {
+  // Close any other open edit forms
+  document.querySelectorAll('.edit-repo-form').forEach(f => f.style.display = 'none');
+  document.getElementById(`edit-form-${id}`).style.display = 'block';
+}
+
+function cancelEditRepo(id) {
+  document.getElementById(`edit-form-${id}`).style.display = 'none';
+  // Reset to original values
+  const r = reposList.find(x => x.id === id);
+  if (r) {
+    document.getElementById(`edit-name-${id}`).value = r.name;
+    document.getElementById(`edit-path-${id}`).value = r.path;
+    document.getElementById(`edit-branch-${id}`).value = r.default_branch;
+    document.getElementById(`edit-glab-${id}`).value = r.glab_config_dir || '';
+    document.getElementById(`edit-gh-${id}`).value = r.gh_config_dir || '';
+  }
+  document.getElementById(`edit-error-${id}`).style.display = 'none';
+}
+
+async function saveRepo(id) {
+  const name = document.getElementById(`edit-name-${id}`).value.trim();
+  const path = document.getElementById(`edit-path-${id}`).value.trim();
+  const default_branch = document.getElementById(`edit-branch-${id}`).value.trim() || 'master';
+  const glab_config_dir = document.getElementById(`edit-glab-${id}`).value.trim();
+  const gh_config_dir = document.getElementById(`edit-gh-${id}`).value.trim();
+  const errEl = document.getElementById(`edit-error-${id}`);
+
+  if (!name) { errEl.textContent = 'Name is required'; errEl.style.display = 'block'; return; }
+  if (!path) { errEl.textContent = 'Path is required'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch(`/repos/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, path, default_branch, glab_config_dir, gh_config_dir }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      errEl.textContent = data.detail || 'Failed to update repository';
+      errEl.style.display = 'block';
+      return;
+    }
+    await loadRepos();
+    if (window._loadRepos) window._loadRepos();
+  } catch (e) {
+    errEl.textContent = 'Network error: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function submitNewRepo() {
+  const name = document.getElementById('new-repo-name').value.trim();
+  const path = document.getElementById('new-repo-path').value.trim();
+  const default_branch = document.getElementById('new-repo-branch').value.trim() || 'master';
+  const glab_config_dir = document.getElementById('new-repo-glab').value.trim();
+  const gh_config_dir = document.getElementById('new-repo-gh').value.trim();
+  const errEl = document.getElementById('add-repo-error');
+
+  if (!name) { errEl.textContent = 'Name is required'; errEl.style.display = 'block'; return; }
+  if (!path) { errEl.textContent = 'Path is required'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch('/repos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, path, default_branch, glab_config_dir, gh_config_dir }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      errEl.textContent = data.detail || 'Failed to add repository';
+      errEl.style.display = 'block';
+      return;
+    }
+    // Reset form
+    document.getElementById('new-repo-name').value = '';
+    document.getElementById('new-repo-path').value = '';
+    document.getElementById('new-repo-branch').value = 'master';
+    document.getElementById('new-repo-glab').value = '';
+    document.getElementById('new-repo-gh').value = '';
+    toggleAddForm();
+    await loadRepos();
+    // Refresh header repo selector
+    if (window._loadRepos) window._loadRepos();
+    document.getElementById('config-error-banner').style.display = 'none';
+  } catch (e) {
+    errEl.textContent = 'Network error: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function deleteRepo(id, name) {
+  if (!confirm(`Remove repository "${name}"? This will not delete any files from disk.`)) return;
+  try {
+    const res = await fetch(`/repos/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.detail || 'Failed to remove');
+      return;
+    }
+    await loadRepos();
+    if (window._loadRepos) window._loadRepos();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// ---- VCS Status ----
+
 async function loadVcsStatus() {
   const btn = document.getElementById('btn-refresh-vcs');
   btn.disabled = true;
@@ -270,8 +503,8 @@ async function loadVcsStatus() {
   try {
     const res = await fetch('/settings/vcs-status');
     const data = await res.json();
-    renderVcs('gh', data.gh, 'gh auth login', 'gh auth login');
-    renderVcs('glab', data.glab, 'glab auth login', 'glab auth login');
+    renderVcs('gh', data.gh, 'gh auth login');
+    renderVcs('glab', data.glab, 'glab auth login');
   } catch (e) {
     ['gh', 'glab'].forEach(k => {
       document.getElementById(`${k}-badge`).className = 'status-badge status-err';
@@ -282,7 +515,7 @@ async function loadVcsStatus() {
   }
 }
 
-function renderVcs(key, info, loginCmd, _) {
+function renderVcs(key, info, loginCmd) {
   const badge = document.getElementById(`${key}-badge`);
   const detail = document.getElementById(`${key}-detail`);
   const hint = document.getElementById(`${key}-hint`);
@@ -306,7 +539,12 @@ function renderVcs(key, info, loginCmd, _) {
   }
 }
 
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 loadSettings();
+loadRepos();
 loadVcsStatus();
 </script>
 </body>

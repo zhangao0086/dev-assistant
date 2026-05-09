@@ -138,20 +138,15 @@ class ClaudeSession:
 class ClaudeSessionManager:
     """Manages Claude CLI processes and session lifecycle"""
 
-    def __init__(self, target_repo: str = "", data_file: str = ""):
+    def __init__(self, target_repo: str, data_file: str, default_branch: str = "master",
+                 glab_config_dir: str = "", gh_config_dir: str = ""):
         if not target_repo:
-            target_repo = os.environ.get("TARGET_PROJECT_PATH", "")
-        if not target_repo:
-            raise ValueError(
-                "target_repo is required. Set TARGET_PROJECT_PATH environment variable "
-                "or pass target_repo parameter."
-            )
+            raise ValueError("target_repo is required.")
         if not data_file:
-            data_dir = os.path.expanduser(os.environ.get("DATA_DIR", "~/.dev-assistant"))
-            data_file = os.path.join(data_dir, "dev-tasks.json")
+            raise ValueError("data_file is required.")
         self.sessions: Dict[str, ClaudeSession] = {}
         self.target_repo = target_repo
-        self.default_branch = os.environ.get("DEFAULT_BRANCH", "master")
+        self.default_branch = default_branch
         self.worktrees_dir = os.path.join(target_repo, ".worktrees")
         self._data_file = data_file
         self._logs_dir = os.path.join(os.path.dirname(os.path.abspath(data_file)), "logs")
@@ -159,7 +154,9 @@ class ClaudeSessionManager:
         self._queue: asyncio.Queue = asyncio.Queue()
         self._worker_task: Optional[asyncio.Task] = None
         self._mr_checker_task: Optional[asyncio.Task] = None
-        self.vcs: VCSProvider = VCSProvider.detect(target_repo)
+        self._glab_config_dir = glab_config_dir
+        self._gh_config_dir = gh_config_dir
+        self.vcs: VCSProvider = VCSProvider.detect(target_repo, glab_config_dir, gh_config_dir)
 
         os.makedirs(self.worktrees_dir, exist_ok=True)
         os.makedirs(os.path.dirname(os.path.abspath(data_file)), exist_ok=True)
@@ -743,7 +740,10 @@ Read `.claude/PLAN.md` first, then follow its steps to complete the implementati
             env = os.environ.copy()
             env.pop("CLAUDECODE", None)
             env["ANTHROPIC_SKIP_TOKEN_COUNT"] = "1"
-            env["GLAB_CONFIG_DIR"] = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".gitlab")
+            if self._glab_config_dir:
+                env["GLAB_CONFIG_DIR"] = self._glab_config_dir
+            if self._gh_config_dir:
+                env["GH_CONFIG_DIR"] = self._gh_config_dir
 
             process = subprocess.Popen(
                 cmd,
@@ -869,9 +869,10 @@ Read `.claude/PLAN.md` first, then follow its steps to complete the implementati
         env.pop("CLAUDECODE", None)
         env["ANTHROPIC_SKIP_TOKEN_COUNT"] = "1"
 
-        # Set GLAB_CONFIG_DIR so glab uses .gitlab/config.yml
-        glab_config_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".gitlab")
-        env["GLAB_CONFIG_DIR"] = glab_config_dir
+        if self._glab_config_dir:
+            env["GLAB_CONFIG_DIR"] = self._glab_config_dir
+        if self._gh_config_dir:
+            env["GH_CONFIG_DIR"] = self._gh_config_dir
 
         # Prepare labels
         labels = ["dev-assistant"]

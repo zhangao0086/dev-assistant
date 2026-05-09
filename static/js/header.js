@@ -16,6 +16,9 @@
     ::-webkit-scrollbar-track { background: #0a0d14; }
     ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #3d4758; }
+    .repo-selector { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 6px; color: #e2e8f0; font-size: 12px; padding: 5px 10px; outline: none; cursor: pointer; max-width: 200px; }
+    .repo-selector:focus { border-color: #3b82f6; }
+    .repo-selector option { background: #1a1f2e; color: #e2e8f0; }
   `;
   document.head.appendChild(style);
 
@@ -36,8 +39,46 @@
   document.getElementById('app-header').outerHTML = `
 <header>
   <h1><a href="/">Dev Assistant</a></h1>
+  <select id="repo-selector" class="repo-selector" onchange="window._onRepoChange(this.value)">
+    <option value="">All Repositories</option>
+  </select>
   <nav class="header-links">
     ${links}
   </nav>
 </header>`;
+
+  // Repo selector logic
+  window.repos = [];
+  window.selectedRepoId = localStorage.getItem('dev-assistant-repo') || '';
+
+  window._onRepoChange = function (repoId) {
+    window.selectedRepoId = repoId;
+    localStorage.setItem('dev-assistant-repo', repoId);
+    if (window.onRepoChanged) window.onRepoChanged(repoId);
+  };
+
+  window._loadRepos = async function () {
+    try {
+      const res = await fetch('/repos');
+      if (!res.ok) return;
+      window.repos = await res.json();
+      const sel = document.getElementById('repo-selector');
+      if (!sel) return;
+
+      const saved = window.selectedRepoId;
+      sel.innerHTML = '<option value="">All Repositories</option>' +
+        window.repos.map(r =>
+          `<option value="${r.id}"${r.id === saved ? ' selected' : ''}>${r.name}</option>`
+        ).join('');
+
+      // If saved repo no longer exists, reset
+      if (saved && !window.repos.find(r => r.id === saved)) {
+        window.selectedRepoId = '';
+        localStorage.removeItem('dev-assistant-repo');
+        sel.value = '';
+      }
+    } catch (e) {}
+  };
+
+  window._loadRepos();
 })();

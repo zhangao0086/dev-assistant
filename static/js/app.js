@@ -61,9 +61,10 @@ const STATUS_LABEL = {
 
 async function fetchSessions() {
   try {
+    const repoParam = window.selectedRepoId ? `?repo_id=${window.selectedRepoId}` : '';
     const [sessionsRes, statsRes] = await Promise.all([
-      fetch(`${API}/sessions`),
-      fetch(`${API}/stats`),
+      fetch(`${API}/sessions${repoParam}`),
+      fetch(`${API}/stats${repoParam}`),
     ]);
     sessions = await sessionsRes.json();
     const stats = await statsRes.json();
@@ -116,6 +117,7 @@ function renderList() {
       <div class="session-row1">
         <span class="session-id">${s.session_id.slice(0, SESSION_ID_SHORT_LEN)}</span>
         <span class="status-badge ${s.status}">${STATUS_LABEL[s.status] || s.status}</span>
+        ${!window.selectedRepoId && s.repo_name ? `<span style="font-size:10px;color:#64748b;background:#1e2433;padding:1px 6px;border-radius:4px;margin-left:4px;">${escHtml(s.repo_name)}</span>` : ''}
         ${s.status === 'review' && s.mr_url ? `<a href="${s.mr_url}" target="_blank" onclick="event.stopPropagation()" class="mr-link"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>View MR${s.mr_number ? ' !' + s.mr_number : ''}</a>` : ''}
         ${s.status === 'review' && s.mr_url ? `<span class="approval-badge ${s.mr_approved ? 'approved' : 'pending'}">${s.mr_approved ? '✓' : '⏳'}</span>` : ''}
       </div>
@@ -378,6 +380,12 @@ async function submitTask() {
   const prompt = document.getElementById("prompt-input").value.trim();
   if (!prompt) return;
 
+  const repoId = window.selectedRepoId;
+  if (!repoId) {
+    alert("Please select a repository first.");
+    return;
+  }
+
   const usePlanMode = document.getElementById("use-plan-mode").checked;
   const btn = document.getElementById("btn-submit");
   btn.disabled = true;
@@ -387,8 +395,12 @@ async function submitTask() {
     const res = await fetch(`${API}/sessions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, use_plan_mode: usePlanMode }),
+      body: JSON.stringify({ prompt, repo_id: repoId, use_plan_mode: usePlanMode }),
     });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.detail || `HTTP ${res.status}`);
+    }
     const data = await res.json();
     document.getElementById("prompt-input").value = "";
     await fetchSessions();
@@ -815,3 +827,14 @@ setInterval(() => {
   const hasActive = sessions.some(s => ACTIVE_STATUSES.includes(s.status));
   if (hasActive) renderList();
 }, 1000);
+
+// ---- Repo selector integration ----
+window.onRepoChanged = function () {
+  sessions = [];
+  selectedId = null;
+  lastRenderedId = null;
+  streamLogs = {};
+  document.getElementById("sessions-list").innerHTML = `<div style="padding:32px;text-align:center;color:#475569;font-size:13px;">Loading...</div>`;
+  document.getElementById("detail-content").innerHTML = `<div class="detail-empty">Select a task to view details</div>`;
+  fetchSessions();
+};

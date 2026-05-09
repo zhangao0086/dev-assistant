@@ -74,11 +74,12 @@ class CronTask:
 
 
 class CronTaskManager:
-    def __init__(self, session_manager, data_file: str):
+    def __init__(self, session_manager, data_file: str, skip_defaults: bool = False):
         self.session_manager = session_manager
         self.data_file = data_file
         self.tasks: dict[str, CronTask] = {}
         self._loop_task: Optional[asyncio.Task] = None
+        self._skip_defaults = skip_defaults
         self._load()
 
     def _load(self):
@@ -96,15 +97,19 @@ class CronTaskManager:
                 self.tasks[task.id] = task
             logger.info(f"Loaded {len(self.tasks)} cron tasks")
         except FileNotFoundError:
-            logger.info("Cron tasks file not found, creating defaults")
-            now = time.time()
-            for item in DEFAULT_TASKS:
-                fields = {k: item[k] for k in CronTask.__dataclass_fields__}
-                task = CronTask(**fields)
-                task.created_at = now
-                task.next_run_at = self._compute_next(task.cron_expr)
-                self.tasks[task.id] = task
-            self._save()
+            if self._skip_defaults:
+                logger.info("Cron tasks file not found, starting with empty list")
+                self._save()
+            else:
+                logger.info("Cron tasks file not found, creating defaults")
+                now = time.time()
+                for item in DEFAULT_TASKS:
+                    fields = {k: item[k] for k in CronTask.__dataclass_fields__}
+                    task = CronTask(**fields)
+                    task.created_at = now
+                    task.next_run_at = self._compute_next(task.cron_expr)
+                    self.tasks[task.id] = task
+                self._save()
         except Exception as e:
             logger.error(f"Error loading cron tasks: {e}")
 

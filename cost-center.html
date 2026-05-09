@@ -319,6 +319,7 @@ async function loadCostStats() {
   const params = new URLSearchParams();
   if (start) params.append('start_date', start);
   if (end) params.append('end_date', end);
+  if (window.selectedRepoId) params.append('repo_id', window.selectedRepoId);
 
   try {
     const response = await fetch(`/cost-stats?${params}`);
@@ -501,6 +502,8 @@ function renderTopTasks(topTasks) {
 document.addEventListener('DOMContentLoaded', function() {
   loadCostStats();
 });
+
+window.onRepoChanged = function () { loadCostStats(); };
 </script>
 
 </div>

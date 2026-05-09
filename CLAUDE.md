@@ -12,8 +12,12 @@ managing Claude Code task execution through a Web UI.
 
 ## Target Project Configuration
 
-The target project path is configured via the `TARGET_PROJECT_PATH` environment
-variable, or by editing the default in `claude_session_manager.py`.
+Multiple target repositories are supported. Repos are managed via the Web UI
+(Settings page) or through the `/repos` API. Each repo gets its own worktrees,
+task history, cron jobs, and MR management.
+
+Legacy: the `TARGET_PROJECT_PATH` environment variable is auto-migrated to
+the multi-repo format on first startup.
 
 ## Rules
 
